@@ -45,3 +45,23 @@ Assert-Equal $badParsed.Frames.Count 0 'CRC 错误帧数量'
 Assert-Equal $badParsed.CrcDrops 1 'CRC 丢弃数量'
 
 Write-Output 'M8010 协议测试通过：控制样例、反馈位域、连续帧同步和 CRC 错误处理均正常。'
+
+Assert-Equal (ConvertTo-HexString (New-M8010EnterFactoryFrame)) 'FE EE 7F 00 00 00 00 00 00 00 00 00 00 00 00 6F 9A' '厂家 swboot 工厂切换帧'
+$bootFrame = New-M8010EnterFactoryFrame
+Assert-Equal (Get-M8010Crc16 $bootFrame[0..14]) 0x9A6F '工厂切换帧 CRC'
+Assert-Equal (ConvertTo-HexString (New-M8010FactoryCommand Discover)) 'FB 00 00 BB' '工厂查询帧'
+Assert-Equal (ConvertTo-HexString (New-M8010FactoryCommand ChangeId -MotorId 0 -NewId 2)) 'FB 01 20 BB' '0 改为 2'
+Assert-Equal (ConvertTo-HexString (New-M8010FactoryCommand ChangeId -MotorId 15 -NewId 14)) 'FB 01 EF BB' '未分配 15 改为 14'
+Assert-Equal (ConvertTo-HexString (New-M8010FactoryCommand PrepareMotor -MotorId 2)) 'FB 04 02 BB' '恢复准备帧'
+Assert-Equal (ConvertTo-HexString (New-M8010FactoryCommand StartMotor -MotorId 2)) 'FB 03 02 BB' '恢复电机模式帧'
+$reply = Find-M8010FactoryReplies ([byte[]]@(0xFB,1,0x20,0xBB,0xFC,1,2,0xBB,0xFC,3,0xE2,0xBB,0xFC,1))
+Assert-Equal $reply.Replies.Count 2 '忽略工厂请求回显并解析两个回复'
+Assert-Equal $reply.Replies[0].MotorId 2 '修改后回复 ID'
+Assert-Equal $reply.Replies[1].Result 14 '工厂固件错误状态'
+Assert-Equal (ConvertTo-HexString $reply.Remaining) 'FC 01' '保留工厂半帧'
+$reply = Find-M8010FactoryReplies ([byte[]]$reply.Remaining + [byte[]]@(2,0xBB))
+Assert-Equal $reply.Replies.Count 1 '工厂拆帧重组'
+$rejected = $false
+try { $null = New-M8010FactoryCommand ChangeId -MotorId 0 -NewId 15 } catch { $rejected = $true }
+Assert-Equal $rejected $true '拒绝将广播地址设为新 ID'
+Write-Output 'M8010 ID 协议测试通过：工厂切换、查询、修改、恢复、拆帧和参数校验。'

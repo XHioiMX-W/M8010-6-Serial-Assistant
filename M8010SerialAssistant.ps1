@@ -226,6 +226,7 @@ $xaml = @'
           <TextBlock Text="宇树 M8010-6 · FE EE 控制帧 / FD EE 反馈帧" FontSize="12" Foreground="#8FA6BF" Margin="0,4,0,0"/>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+          <Image x:Name="DesignWordmark" Width="184" Height="44" Stretch="Uniform" Margin="0,0,18,0" RenderOptions.BitmapScalingMode="HighQuality"/>
           <Border Background="#F8FAFC" BorderBrush="#DCE4EC" BorderThickness="1" CornerRadius="3" Padding="6,4" Margin="0,0,20,0">
             <Image x:Name="BrandLogo" Width="150" Height="36" Stretch="Uniform"/>
           </Border>
@@ -283,6 +284,47 @@ $xaml = @'
                   <Button x:Name="CalibrationButton" Content="开始编码器校准" Background="#624A1E" BorderBrush="#B88A38"/>
                 </WrapPanel>
                 <TextBlock Text="急停和关闭串口前会发送 STATUS 0 锁定。编码器校准开始后，5 秒内所有发送动作会被锁定。" TextWrapping="Wrap" Foreground="#F1B5A9" FontSize="11"/>
+              </StackPanel>
+            </GroupBox>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="电机 ID">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="18">
+            <Border Background="#12344A" BorderBrush="#2E8DB2" BorderThickness="1" Padding="16" CornerRadius="5" Margin="0,0,0,12">
+              <StackPanel>
+                <TextBlock Text="读取与修改电机 ID" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock Text="先打开串口。普通读取不进入工厂模式；修改 ID 会自动进入工厂模式、写入、恢复电机模式并验证反馈。" TextWrapping="Wrap" Foreground="#B8D9E8" Margin="0,7,0,0"/>
+              </StackPanel>
+            </Border>
+            <GroupBox Header="读取 ID">
+              <StackPanel>
+                <WrapPanel>
+                  <Button x:Name="ReadMotorIdsButton" Content="扫描 / 读取 ID" Background="#146C62" BorderBrush="#42C5AE"/>
+                  <Button x:Name="UseDetectedIdButton" Content="将选中 ID 用于控制"/>
+                </WrapPanel>
+                <TextBlock Text="按顺序查询 ID 0–14，扫描期间发送 STATUS 0 停止输出。正常反馈需通过 CRC；扫描不能区分使用相同 ID 的多台电机。" Foreground="#A9BAD0" TextWrapping="Wrap" Margin="0,6,0,8"/>
+                <ComboBox x:Name="DetectedIdsCombo" MinWidth="220" HorizontalAlignment="Left"/>
+                <TextBlock x:Name="IdReadStatusText" Text="尚未读取。打开串口后点击扫描。" TextWrapping="Wrap" Foreground="#8ED8FF" Margin="0,10,0,0"/>
+              </StackPanel>
+            </GroupBox>
+            <GroupBox Header="修改 ID（单电机配置）">
+              <StackPanel>
+                <CheckBox x:Name="SingleMotorIdCheck" Content="已确认总线只接一台电机，且没有其他主机发送数据"/>
+                <TextBlock Text="厂家要求单电机操作。未分配 ID 15 或处于工厂模式时，请先用“工厂读取”。重新上电不能代替“恢复电机模式”。" TextWrapping="Wrap" Foreground="#F1B5A9" Margin="0,6,0,12"/>
+                <WrapPanel>
+                  <Label Content="当前 ID（0–15）"/><TextBox x:Name="CurrentMotorIdBox" Text="0" Width="80"/>
+                  <Label Content="新 ID（0–14）" Margin="18,0,0,0"/><TextBox x:Name="NewMotorIdBox" Text="1" Width="80"/>
+                </WrapPanel>
+                <WrapPanel Margin="0,12,0,0">
+                  <Button x:Name="FactoryReadIdsButton" Content="工厂读取（含 ID 15）"/>
+                  <Button x:Name="ChangeMotorIdButton" Content="修改 ID 并验证" Background="#14532D" BorderBrush="#4ADE80"/>
+                  <Button x:Name="RecoverMotorModeButton" Content="恢复电机模式"/>
+                  <Button x:Name="CancelIdOperationButton" Content="取消 / 恢复" IsEnabled="False"/>
+                </WrapPanel>
+                <TextBlock x:Name="IdOperationStatusText" Text="就绪。操作期间禁止运动控制；验证失败会显示具体阶段。" TextWrapping="Wrap" Foreground="#8ED8FF" Margin="0,10,0,0"/>
               </StackPanel>
             </GroupBox>
           </StackPanel>
@@ -354,6 +396,59 @@ $xaml = @'
             </GroupBox>
           </StackPanel>
         </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="多电机程序">
+        <Grid>
+          <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="18,12,18,8">
+            <Border Background="#12344A" BorderBrush="#2E8DB2" BorderThickness="1" Padding="10" CornerRadius="5" Margin="0,0,0,6">
+              <StackPanel>
+                <TextBlock Text="8 电机 · 自动速度程序" FontSize="16" FontWeight="SemiBold"/>
+                <TextBlock Text="模板：ID 2–9，以输出轴 1 rad/s 各运行 2 秒。正速度正转、负速度反转；顺序逐台切换，同时分别计时。" TextWrapping="Wrap" Foreground="#B8D9E8" Margin="0,4,0,0"/>
+              </StackPanel>
+            </Border>
+            <GroupBox Header="执行设置" Padding="8" Margin="0,0,0,6">
+              <StackPanel>
+                <WrapPanel>
+                  <Label Content="运行方式"/><ComboBox x:Name="MultiModeCombo" Width="150" SelectedIndex="0"><ComboBoxItem Content="顺序执行"/><ComboBoxItem Content="同时执行"/></ComboBox>
+                  <Label Content="超速阈值 rad/s（自行填写）" Margin="18,0,0,0"/><TextBox x:Name="MultiOverspeedBox" Width="85" Text=""/>
+                  <Button x:Name="MultiTemplateButton" Content="恢复 ID 2–9 模板" Margin="18,0,6,0"/>
+                  <Button x:Name="MultiSaveButton" Content="保存参数"/><Button x:Name="MultiLoadButton" Content="载入参数"/>
+                </WrapPanel>
+                <Expander Header="高级设置 · 速度增益与反馈超时" Foreground="#A9BAD0" Margin="0,4,0,0">
+                  <StackPanel Margin="0,8,0,0">
+                    <WrapPanel>
+                      <Label Content="速度增益 Kspd"/><TextBox x:Name="MultiKdBox" Width="75" Text="0.02"/>
+                      <Label Content="单次反馈超时 ms" Margin="18,0,0,0"/><TextBox x:Name="MultiTimeoutBox" Width="75" Text="200"/>
+                    </WrapPanel>
+                    <TextBlock Text="采用直接速度控制，按连接页减速比换算输出轴目标；运行时参数锁定。" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                  </StackPanel>
+                </Expander>
+              </StackPanel>
+            </GroupBox>
+            <GroupBox Header="电机参数与实时状态" Padding="8" Margin="0,0,0,6">
+              <StackPanel>
+                <Grid x:Name="MultiRowsGrid"/>
+                <TextBlock Text="可取消勾选不参与的电机；ID 必须互不相同且为 0–14。运行前逐台确认反馈；任何电机失联、报错、过热或超速会停止整组。" Foreground="#A9BAD0" TextWrapping="Wrap" Margin="0,10,0,0"/>
+              </StackPanel>
+            </GroupBox>
+            <TextBlock Text="同时执行通过共享 RS-485 总线逐台轮询，存在通信和 Windows 调度延迟，不是硬件同步触发。时长从首条速度指令开始计时，不包含预检。手动 / 异常停止会广播锁定总线上的全部电机，再逐台验证。" TextWrapping="Wrap" Foreground="#7D91A8" Margin="8,0,8,0"/>
+          </StackPanel>
+        </ScrollViewer>
+            <Border Grid.Row="1" Margin="18,8,18,16" Background="#101D31" BorderBrush="#263A54" BorderThickness="1" Padding="10" CornerRadius="4">
+              <StackPanel>
+                <WrapPanel>
+                  <Button x:Name="MultiStartButton" Content="▶  启动程序" Background="#146C62" BorderBrush="#42C5AE" FontWeight="SemiBold"/>
+                  <Button x:Name="MultiStopButton" Content="■  停止全部 / 重试锁定" Background="#8A2E3A" BorderBrush="#F97066"/>
+                  <TextBlock x:Name="MultiElapsedText" Text="已用时 0.0 s" Foreground="#8ED8FF" Margin="18,0,0,0"/>
+                </WrapPanel>
+                <ProgressBar x:Name="MultiProgress" Minimum="0" Maximum="8" Value="0" Height="5" Margin="0,6,0,6" Foreground="#42C5AE" Background="#1E293B"/>
+                <TextBlock x:Name="MultiStatusText" Text="就绪。连接串口、填写阈值并检查参数后启动。" TextWrapping="Wrap" Foreground="#8ED8FF"/>
+              </StackPanel>
+            </Border>
+        </Grid>
       </TabItem>
 
       <TabItem Header="状态监视">
@@ -537,14 +632,20 @@ $script:CalibrationUntil = [DateTime]::MinValue
 $script:CalibrationTimer = New-Object System.Windows.Threading.DispatcherTimer
 $script:CalibrationTimer.Interval = [TimeSpan]::FromMilliseconds(100)
 
-$logoPath = Join-Path $PSScriptRoot '北京建筑大学-01.png'
-if (Test-Path -LiteralPath $logoPath) {
-    $logoImage = New-Object System.Windows.Media.Imaging.BitmapImage
-    $logoImage.BeginInit()
-    $logoImage.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
-    $logoImage.UriSource = [Uri]::new($logoPath, [UriKind]::Absolute)
-    $logoImage.EndInit()
-    $BrandLogo.Source = $logoImage
+foreach ($asset in @(
+    @{ Control = 'BrandLogo'; File = '北京建筑大学-01.png' },
+    @{ Control = 'DesignWordmark'; File = 'assets/design-wordmark.jpg' }
+)) {
+    $assetPath = Join-Path $PSScriptRoot $asset.File
+    if (Test-Path -LiteralPath $assetPath) {
+        $assetImage = New-Object System.Windows.Media.Imaging.BitmapImage
+        $assetImage.BeginInit()
+        $assetImage.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+        $assetImage.UriSource = [Uri]::new($assetPath, [UriKind]::Absolute)
+        $assetImage.EndInit()
+        $assetImage.Freeze()
+        (Get-Control $asset.Control).Source = $assetImage
+    }
 }
 
 $statusNames = @{
@@ -758,6 +859,8 @@ function Update-TorqueCommand([double]$Target, [double]$IntervalSeconds) {
 }
 
 function Apply-Strategy([string]$Strategy) {
+    Assert-MultiMotionAllowed
+    Assert-IdMotionAllowed
     if ((Get-Date) -lt $script:CalibrationUntil) { Show-Problem '编码器校准进行中，5 秒内禁止发送任何数据包。'; return }
     if ($script:CycleTimer.IsEnabled) {
         Stop-ControlOutput '切换策略'
@@ -892,6 +995,8 @@ function Clear-CalibrationLockout {
     $RawSendBox.IsEnabled = $rawAllowed
     $ModeHint.Text = '编码器校准完成，可以重新选择控制模式。'
     Write-Log '编码器校准等待结束，通信动作已恢复。'
+    Set-IdOperationControls
+    if ($script:MultiBusy -or $script:MultiNeedsStop) { Set-MultiControls }
 }
 
 function New-CurrentFrame(
@@ -919,6 +1024,8 @@ function New-CurrentFrame(
 }
 
 function Send-Bytes([byte[]]$Bytes, [string]$Description) {
+    if (-not $script:MultiInternalSend) { Assert-MultiMotionAllowed }
+    if (-not $script:IdInternalSend) { Assert-IdMotionAllowed }
     if ($null -eq $script:SerialPort -or -not $script:SerialPort.IsOpen) { throw '串口尚未打开。' }
     $script:SerialPort.Write($Bytes, 0, $Bytes.Length)
     $hex = ConvertTo-HexString $Bytes
@@ -950,6 +1057,8 @@ function Request-SafeFeedback {
 
 function Start-FocLoop([bool]$FromPositionFeedback = $false) {
     try {
+        Assert-MultiMotionAllowed
+        Assert-IdMotionAllowed
         if ($script:PendingPositionStart -and (Get-Date) -gt $script:PendingPositionStartUntil) {
             $script:PendingPositionStart = $false
             $script:PendingPositionStartMotorId = -1
@@ -1090,6 +1199,8 @@ function Start-FocLoop([bool]$FromPositionFeedback = $false) {
 }
 
 function Stop-ControlOutput([string]$Description = '停止 / 锁定') {
+    if ($script:MultiBusy -or $script:MultiNeedsStop) { Stop-MultiProgram $Description; return }
+    if ($script:IdBusy -or $script:IdNeedsRecovery) { Cancel-IdOperation; return }
     $script:CycleTimer.Stop()
     $OutputUnitsCheck.IsEnabled = $true
     $OverspeedLimitBox.IsEnabled = $true
@@ -1162,6 +1273,7 @@ function Receive-SerialData {
     if ($script:IsClosing -or $script:IsClosed) { return }
     $port = $script:SerialPort
     if ($null -eq $port -or -not $port.IsOpen) { return }
+    if ($script:IdBusy) { Receive-IdSerialData; return }
 
     try {
         # SerialPort.DataReceived invokes a PowerShell script block on a driver
@@ -1191,6 +1303,7 @@ function Receive-SerialData {
 
             foreach ($frame in $parsed.Frames) {
                 $receivedFrames++
+                if ($script:MultiBusy) { Accept-MultiFeedback $frame }
                 $latestFeedback = $frame
                 if ($frame.ErrorCode -ne 0 -or $frame.TemperatureC -ge 90) { $faultFeedback = $frame }
             }
@@ -1210,6 +1323,7 @@ function Receive-SerialData {
         # BytesToRead can change between the availability check and Read().
     } catch {
         $script:ReceiveTimer.Stop()
+        if ($script:MultiBusy) { Stop-MultiProgram "串口接收异常：$($_.Exception.Message)" }
         $script:CycleTimer.Stop()
         $CycleCheck.IsChecked = $false
         $StrategyStatusText.Text = '接收已停止：串口读取异常'
@@ -1256,6 +1370,16 @@ function Open-Serial {
 
 function Close-Serial {
     if ($script:IsClosed -and $null -eq $script:SerialPort) { return }
+    if ($script:MultiBusy) {
+        Stop-MultiProgram '关闭串口前停止程序'
+        Write-Log '正在逐台停止并验证，请结束后再次关闭串口。'
+        return
+    }
+    if ($script:IdBusy) {
+        Cancel-IdOperation
+        Write-Log 'ID 操作正在取消 / 恢复，请完成后再次关闭串口。'
+        return
+    }
     $script:CycleTimer.Stop()
     $script:ReceiveTimer.Stop()
     $script:CalibrationTimer.Stop()
@@ -1266,7 +1390,7 @@ function Close-Serial {
         $CycleCheck.IsChecked = $false
         if ($null -ne $currentPort) {
             if ($currentPort.IsOpen) {
-                if ((Get-Date) -ge $script:CalibrationUntil) {
+                if ((Get-Date) -ge $script:CalibrationUntil -and -not $script:IdNeedsRecovery) {
                     try {
                         $safeFrame = New-CurrentFrame -StatusOverride 0 -ZeroMotion $true
                         $currentPort.Write($safeFrame, 0, $safeFrame.Length)
@@ -1294,6 +1418,9 @@ function Send-Raw {
         if ($bytes.Length -eq 17 -and $bytes[0] -eq 0xFE -and $bytes[1] -eq 0xEE -and ((($bytes[2] -shr 4) -band 0x07) -eq 2)) { Set-CalibrationLockout }
     } catch { Show-Problem $_.Exception.Message }
 }
+
+. (Join-Path $PSScriptRoot 'M8010IdManager.ps1')
+. (Join-Path $PSScriptRoot 'M8010MultiProgram.ps1')
 
 $RefreshPortsButton.Add_Click({ Refresh-Ports })
 $OpenButton.Add_Click({ Open-Serial })
@@ -1378,6 +1505,7 @@ $ModeCombo.Add_SelectionChanged({
         $RawSendButton.IsEnabled = $true
         $RawSendBox.IsEnabled = $true
     }
+    if ($script:MultiBusy -or $script:MultiNeedsStop) { Set-MultiControls }
 })
 $CycleCheck.Add_Checked({
     if ($script:CycleTimer.IsEnabled) { return }
@@ -1454,6 +1582,8 @@ $window.Dispatcher.Add_UnhandledException({
     param($sender, $eventArgs)
     # Stop output first so a partially handled UI event cannot keep sending commands.
     try {
+        if ($script:MultiBusy) { Stop-MultiProgram '界面异常，停止自动程序' }
+        if ($script:IdBusy) { Complete-IdOperation '界面发生异常，ID 操作已中止；若进入过工厂模式，请重新连接后恢复电机模式。' }
         $script:CycleTimer.Stop()
         $script:ReceiveTimer.Stop()
         if ($null -ne $CycleCheck) { $CycleCheck.IsChecked = $false }
@@ -1464,6 +1594,19 @@ $window.Dispatcher.Add_UnhandledException({
     } catch { }
 })
 $window.Add_Closing({
+    param($sender, $eventArgs)
+    if ($script:MultiBusy) {
+        $eventArgs.Cancel = $true
+        Stop-MultiProgram '关闭窗口前停止程序'
+        return
+    }
+    $script:MultiTimer.Stop()
+    if ($script:IdBusy) {
+        $eventArgs.Cancel = $true
+        Cancel-IdOperation
+        return
+    }
+    $script:IdTimer.Stop()
     $script:IsClosing = $true
     $script:CycleTimer.Stop()
     $script:ReceiveTimer.Stop()
@@ -1610,7 +1753,9 @@ if ($SmokeTest) {
     $script:SerialPort = $null
     $OverspeedLimitBox.Text = ''
     $script:MaxFeedbackSpeedOutputRadPerSec = [double]::NaN
-    Write-Output 'M8010 UI smoke test passed: XAML, direct speed strategy, position feedback start flow and all three mode frames were verified.'
+    . (Join-Path $PSScriptRoot 'Test-M8010IdWorkflow.ps1')
+    . (Join-Path $PSScriptRoot 'Test-M8010MultiProgram.ps1')
+    Write-Output 'M8010 UI smoke test passed: XAML, direct speed strategy, position feedback start flow, ID workflow, multi-motor programs and all three mode frames were verified.'
     exit 0
 }
 [void]$window.ShowDialog()

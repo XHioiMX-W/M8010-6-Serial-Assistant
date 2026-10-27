@@ -172,3 +172,45 @@ function Find-M8010FeedbackFrames {
     }
     [pscustomobject]@{ Frames = @($frames); Remaining = [byte[]]$remaining.ToArray(); CrcDrops = $crcDrops }
 }
+
+# GO-M8010-6 MotorTools v0.2.0 factory protocol. These frames are deliberately
+# separate from STATUS 0/1/2 motion commands. See ID-PROTOCOL.md for provenance.
+function New-M8010EnterFactoryFrame {
+    return [byte[]]@(0xFE, 0xEE, 0x7F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x6F, 0x9A)
+}
+
+function New-M8010FactoryCommand {
+    param(
+        [ValidateSet('Discover', 'ChangeId', 'PrepareMotor', 'StartMotor')][string]$Command,
+        [ValidateRange(0, 15)][int]$MotorId = 0,
+        [ValidateRange(0, 14)][int]$NewId = 0
+    )
+    switch ($Command) {
+        'Discover'     { return [byte[]]@(0xFB, 0, 0, 0xBB) }
+        'ChangeId'     { return [byte[]]@(0xFB, 1, (($NewId -shl 4) -bor $MotorId), 0xBB) }
+        'PrepareMotor' { return [byte[]]@(0xFB, 4, $MotorId, 0xBB) }
+        'StartMotor'   { return [byte[]]@(0xFB, 3, $MotorId, 0xBB) }
+    }
+}
+
+function Find-M8010FactoryReplies {
+    param([byte[]]$Buffer)
+    $replies = [System.Collections.Generic.List[object]]::new()
+    $offset = 0
+    while ($offset -lt $Buffer.Length) {
+        if ($Buffer[$offset] -ne 0xFC) { $offset++; continue }
+        if (($Buffer.Length - $offset) -lt 4) { break }
+        # The factory protocol has no CRC. Require both delimiters and a known
+        # response command, then verify success with normal CRC-protected frames.
+        if ($Buffer[$offset + 3] -eq 0xBB -and $Buffer[$offset + 1] -in 1, 3, 4) {
+            $replies.Add([pscustomobject]@{
+                Command = [int]$Buffer[$offset + 1]
+                MotorId = [int]($Buffer[$offset + 2] -band 0x0F)
+                Result = [int]($Buffer[$offset + 2] -shr 4)
+            })
+            $offset += 4
+        } else { $offset++ }
+    }
+    $remaining = if ($offset -lt $Buffer.Length) { [byte[]]$Buffer[$offset..($Buffer.Length - 1)] } else { [byte[]]@() }
+    return [pscustomobject]@{ Replies = @($replies.ToArray()); Remaining = $remaining }
+}
